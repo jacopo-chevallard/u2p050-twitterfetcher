@@ -1,1 +1,1 @@
-web: gunicorn main_u2p050twitterfetcher
+web: gunicorn main_u2p050twitterfetcher:app
