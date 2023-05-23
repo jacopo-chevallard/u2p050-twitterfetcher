@@ -1,10 +1,6 @@
-FROM 745950815615.dkr.ecr.eu-west-1.amazonaws.com/python-3.8-slim-buster as base
+FROM python-3.8-slim-buster as base
 
 WORKDIR /app
-
-ARG CODEARTIFACT_AUTH_TOKEN
-
-ENV CODEARTIFACT_AUTH_TOKEN=$CODEARTIFACT_AUTH_TOKEN
 
 COPY requirements.txt /app/requirements.txt
 COPY Makefile .
