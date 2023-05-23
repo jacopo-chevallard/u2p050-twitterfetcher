@@ -6,16 +6,6 @@ PROJECT_VERSION=$(shell cat VERSION)
 PYTHON_VERSION=3.8
 
 PYTHON=python
-URL=https://aws:${CODEARTIFACT_AUTH_TOKEN}@bloom-745950815615.d.codeartifact.eu-west-1.amazonaws.com/pypi/bloom/simple/
-
-env-prod env-dev env-test:
-	ifndef CODEARTIFACT_AUTH_TOKEN
-		export CODEARTIFACT_AUTH_TOKEN="$(shell \
-		aws codeartifact get-authorization-token \
-		--domain bloom --region eu-west-1 \
-		--domain-owner 745950815615 \
-		--query authorizationToken --output text)"
-	endif
 
 dep: ## install required dependencies for build.
 	$(PYTHON) -m pip install artifacts-keyring --pre
@@ -28,18 +18,15 @@ dep: ## install required dependencies for build.
 	$(PYTHON) -m pip install pytest
 	$(PYTHON) -m pip install pre-commit
 
-.create_env:
-	@echo "CODEARTIFACT_AUTH_TOKEN=\"${CODEARTIFACT_AUTH_TOKEN}\"" > .env
-
 env-test: dep## init test environnement.
 
-	$(PYTHON) -m pip install -r requirements.txt --index-url=$(URL)
+	$(PYTHON) -m pip install -r requirements.txt
 
 env-dev: dep## init dev environnement.
-	$(PYTHON) -m pip install -r requirements.txt --index-url=$(URL)
+	$(PYTHON) -m pip install -r requirements.txt 
 
 env-prod: dep## init prod environnement.
-	$(PYTHON) -m pip install -r requirements.txt --index-url=$(URL)
+	$(PYTHON) -m pip install -r requirements.txt
 
 welcome: dep env-dev ## Init evrything to get started
 
@@ -69,6 +56,3 @@ clean:
 
 help: ## Display this help screen
 	@grep -h -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-30s\033[0m %s\n", $$1, $$2}'
-
-aws-login:
-	    @aws codeartifact login --tool pip --domain bloom --repository bloom
