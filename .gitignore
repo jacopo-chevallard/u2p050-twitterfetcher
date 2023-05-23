@@ -1,0 +1,16 @@
+.mypy_cache
+.pytest_cache
+.venv
+.coverage
+.env
+.venvs
+pytestdebug.log
+__pycache__
+.idea/
+*.iml
+*.egg-info/
+.eggs/
+build/
+dist/
+*.rdb
+.DS_Store

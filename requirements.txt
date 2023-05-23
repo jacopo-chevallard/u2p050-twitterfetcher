@@ -1,0 +1,9 @@
+flask
+Flask-Session
+Flask-Caching
+PyJWT
+dash
+dash-bootstrap-components
+dash-extensions
+python-dotenv
+pandas

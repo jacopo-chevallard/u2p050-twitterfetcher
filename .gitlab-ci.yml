@@ -1,0 +1,97 @@
+stages:
+  - build
+  - deploy
+
+variables:
+  DOCKER_REGISTRY: 745950815615.dkr.ecr.eu-west-1.amazonaws.com
+  DOCKER_IMAGE_REPOSITORY: ${DOCKER_REGISTRY}/${CI_PROJECT_NAME}
+
+build_job:
+  stage: build
+  image: 745950815615.dkr.ecr.eu-west-1.amazonaws.com/kaniko:v1.7.0
+  rules:
+    - if: '$CI_COMMIT_TAG || $CI_PIPELINE_SOURCE == "merge_request_event"'
+      when: always
+    - when: never
+  before_script:
+    - |
+      if [[ -z ${CI_COMMIT_BRANCH+x} ]]; then
+        DOCKER_IMAGE_TAG=$CI_COMMIT_TAG
+      else
+        DOCKER_IMAGE_TAG=${CI_COMMIT_BRANCH//\//-}-${CI_PIPELINE_ID}
+      fi
+    - CODEARTIFACT_AUTH_TOKEN=`aws codeartifact get-authorization-token --domain bloom --region eu-west-1 --domain-owner 745950815615 --query authorizationToken --output text`
+  script:
+    - mkdir -p /kaniko/.docker
+    - echo "${DOCKER_AUTH_CONFIG}" > /kaniko/.docker/config.json
+    - >-
+      /kaniko/executor
+      --snapshotMode=redo
+      --use-new-run
+      --context "${CI_PROJECT_DIR}"
+      --build-arg CODEARTIFACT_AUTH_TOKEN="${CODEARTIFACT_AUTH_TOKEN}"
+      --dockerfile "${CI_PROJECT_DIR}/Dockerfile"
+      --destination "${DOCKER_IMAGE_REPOSITORY}:${DOCKER_IMAGE_TAG}"
+
+deploy-staging:
+  stage: deploy
+  when : manual
+  variables:
+    DEPLOY_FILE: values-staging.yaml
+  image:
+    name: 745950815615.dkr.ecr.eu-west-1.amazonaws.com/argocd:v2.2.2
+  before_script:
+    - |
+      if [[ -z ${CI_COMMIT_BRANCH+x} ]]; then
+        DOCKER_IMAGE_TAG=$CI_COMMIT_TAG
+        BRANCH=$CI_COMMIT_TAG
+      else
+        DOCKER_IMAGE_TAG=${CI_COMMIT_BRANCH//\//-}-${CI_PIPELINE_ID}
+        BRANCH=$CI_COMMIT_BRANCH
+      fi
+  script:
+    - |
+      if argocd app get u2p050-twitterfetcher-dev --grpc-web &> /dev/null ; then
+        echo "u2p050-twitterfetcher-dev already exist."
+      else
+        echo "Creating ${CI_PROJECT_URL}.git repo to argocd"
+        argocd --grpc-web repo add ${CI_PROJECT_URL}.git --username ${ARGOCD_GITLAB_USER} --password ${ARGOCD_GITLAB_USER_TOKEN}
+        echo "Creating u2p050-twitterfetcher-dev app to argocd"
+        argocd --grpc-web app create u2p050-twitterfetcher-dev --project labs  --repo ${CI_PROJECT_URL}.git --path deploy/u2p050twitterfetcher --dest-server "https://kubernetes.default.svc" --dest-namespace u2p050-twitterfetcher-dev --revision ${BRANCH} --values ${DEPLOY_FILE}
+      fi
+    - argocd --grpc-web app set u2p050-twitterfetcher-dev --revision ${BRANCH} -p image.tag=${DOCKER_IMAGE_TAG}
+    - argocd --grpc-web app sync u2p050-twitterfetcher-dev
+    - argocd --grpc-web app wait u2p050-twitterfetcher-dev --timeout 300
+
+
+deploy-prod:
+  stage: deploy
+  rules:
+    - if: '$CI_COMMIT_TAG'
+    - when: manual
+  variables:
+    DEPLOY_FILE: values.yaml
+  image:
+    name: 745950815615.dkr.ecr.eu-west-1.amazonaws.com/argocd:v2.2.2
+  before_script:
+    - |
+      if [[ -z ${CI_COMMIT_BRANCH+x} ]]; then
+        DOCKER_IMAGE_TAG=$CI_COMMIT_TAG
+        BRANCH=$CI_COMMIT_TAG
+      else
+        DOCKER_IMAGE_TAG=${CI_COMMIT_BRANCH//\//-}-${CI_PIPELINE_ID}
+        BRANCH=$CI_COMMIT_BRANCH
+      fi
+  script:
+    - |
+      if argocd app get u2p050-twitterfetcher --grpc-web &> /dev/null ; then
+        echo "u2p050-twitterfetcher already exist."
+      else
+        echo "Creating ${CI_PROJECT_URL}.git repo to argocd"
+        argocd --grpc-web repo add ${CI_PROJECT_URL}.git --username ${ARGOCD_GITLAB_USER} --password ${ARGOCD_GITLAB_USER_TOKEN}
+        echo "Creating u2p050-twitterfetcher app to argocd"
+        argocd --grpc-web app create u2p050-twitterfetcher --project labs  --repo ${CI_PROJECT_URL}.git --path deploy/u2p050twitterfetcher --dest-server "https://kubernetes.default.svc" --dest-namespace u2p050-twitterfetcher --revision ${BRANCH} --values ${DEPLOY_FILE}
+      fi
+    - argocd --grpc-web app set u2p050-twitterfetcher --revision ${BRANCH} -p image.tag=${DOCKER_IMAGE_TAG}
+    - argocd --grpc-web app sync u2p050-twitterfetcher
+    - argocd --grpc-web app wait u2p050-twitterfetcher --timeout 300

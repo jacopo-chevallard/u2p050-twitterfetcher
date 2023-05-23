@@ -1,0 +1,10 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ .Chart.Name }}
+  labels: {{- include "u2p050-twitterfetcher.labels" . | nindent 4 }}
+data:
+  {{- range $key, $value := .Values.env.prod }}
+  {{ $key }}: {{ $value | quote }}
+  {{- end }}
+  

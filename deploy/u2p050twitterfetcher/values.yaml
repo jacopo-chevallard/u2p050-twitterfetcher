@@ -1,0 +1,117 @@
+# Default values for u2p050-twitterfetcher.
+# This is a YAML-formatted file.
+# Declare variables to be passed into your templates.
+
+replicaCount: 1
+
+image:
+  repository: 745950815615.dkr.ecr.eu-west-1.amazonaws.com/u2p050-twitterfetcher
+  pullPolicy: Always
+  # Overrides the image tag whose default is the chart appVersion.
+  tag: "latest"
+
+imagePullSecrets: []
+nameOverride: ""
+fullnameOverride: ""
+
+env:
+  prod:
+    FLASK_ENV: production
+    LISTEN_HOST: 0.0.0.0
+    LISTEN_PORT: 9191
+    PROD_ES_USER: elastic
+    PROD_ES_PWD: ou70w0Cu18Wb213dx9sQ5mGo
+    PROD_ES_HOST: https://elastic.labs.bloomtech.io
+    PROD_ES_PORT: 443
+    SECRET: \xa3@#Ad\xe2\xc6[.\x08\xee@\xeas)\x1f
+    TOKEN_SECRET: >-
+      >j(SZF&57}R)z[,"h`bu,KY#/C({6tr&8eY=6U.:FC{My&$R%lQ5,R:N`[ZT[_vrA/aEsbhHWm+oTSp$8t^K*WXSn8=w%0:r>xqq
+
+serviceAccount:
+  # Specifies whether a service account should be created
+  create: true
+  # Annotations to add to the service account
+  annotations: {}
+  # The name of the service account to use.
+  # If not set and create is true, a name is generated using the fullname template
+  name: ""
+
+podAnnotations: {}
+
+podSecurityContext:
+  {}
+  # fsGroup: 2000
+
+securityContext:
+  {}
+  # capabilities:
+  #   drop:
+  #   - ALL
+  # readOnlyRootFilesystem: true
+  # runAsNonRoot: true
+  # runAsUser: 1000
+
+service:
+  type: ClusterIP
+  port: 80
+
+resources:
+  {}
+  # We usually recommend not to specify default resources and to leave this as a conscious
+  # choice for the user. This also increases chances charts run on environments with little
+  # resources, such as Minikube. If you do want to specify resources, uncomment the following
+  # lines, adjust them as necessary, and remove the curly braces after 'resources:'.
+  # limits:
+  #   cpu: 100m
+  #   memory: 128Mi
+  # requests:
+  #   cpu: 100m
+  #   memory: 128Mi
+
+autoscaling:
+  enabled: false
+  minReplicas: 1
+  maxReplicas: 100
+  targetCPUUtilizationPercentage: 80
+  # targetMemoryUtilizationPercentage: 80
+
+nodeSelector: {}
+
+tolerations: []
+
+affinity: {}
+
+readinessProbe:
+  path: /auth/healthz
+livenessProbe:
+  path: /auth/healthz
+
+ingress:
+  enabled: true
+  public:
+    enabled: true
+    annotations:
+      kubernetes.io/ingress.class: public
+      cert-manager.io/cluster-issuer: letsencrypt-prod
+      nginx.ingress.kubernetes.io/proxy-send-timeout: "900"
+      nginx.ingress.kubernetes.io/proxy-read-timeout: "900"
+      nginx.ingress.kubernetes.io/proxy-body-size: 1024m
+  private:
+    enabled: true
+    annotations:
+      kubernetes.io/ingress.class: private
+      cert-manager.io/cluster-issuer: letsencrypt-prod
+      nginx.ingress.kubernetes.io/proxy-send-timeout: "900"
+      nginx.ingress.kubernetes.io/proxy-read-timeout: "900"
+      nginx.ingress.kubernetes.io/proxy-body-size: 1024m
+  hosts:
+    - host: u2p050twitterfetcher.lab.bloomtech.io
+      paths:
+        - path: /
+          backend:
+            serviceName: u2p050-twitterfetcher
+            servicePort: 80
+  tls:
+    - secretName: u2p050twitterfetcher-lab-bloomtech-io-tls
+      hosts:
+        - u2p050twitterfetcher.lab.bloomtech.io

@@ -1,0 +1,5 @@
+[flake8]
+ignore=D202,D106
+max-line-length = 88
+exclude=tests/*,.venv/*
+docstring-convention=google

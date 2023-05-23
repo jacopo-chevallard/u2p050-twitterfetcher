@@ -1,0 +1,9 @@
+# Ignore everything
+**
+
+# ... except for dependencies and source
+!requirements.txt
+!u2p050twitterfetcher/
+!main_u2p050twitterfetcher.py
+!config.py
+!Makefile
