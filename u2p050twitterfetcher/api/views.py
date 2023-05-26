@@ -14,14 +14,14 @@ def print_hello():
 
 @api_bp.route("/fetch/twitter", methods=["GET"])
 def fetch_twitter():
-    content = request.args.get('content', None)
+    content = request.args.get('request', None)
     scraper = snscrape.modules.twitter.TwitterSearchScraper(content)
     tweets = [tweet.json() for tweet in scraper.get_items()]
-    return jsonify(tweets)
+    return (tweets)
 
 @api_bp.route("/stream/twitter", methods=["GET"])
 def stream_twitter():
-    content = request.args.get('content', None)
+    content = request.args.get('request', None)
     delay = 10
     def generate():
         old_tweets = set()
