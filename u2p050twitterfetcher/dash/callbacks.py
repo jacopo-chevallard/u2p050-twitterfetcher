@@ -3,7 +3,7 @@ from ..auth.auth import payload_from_token
 from ..dash.cache.helpers import store_data_frame, load_data_frame
 from dash import html, dcc
 import urllib.parse
-from flask import current_app
+from flask import current_app, url_for
 import os
 
 def register_callbacks(app, cache=None):
@@ -25,8 +25,8 @@ def register_callbacks(app, cache=None):
         # bot response aligned right and italics
         rspd = [dcc.Markdown(f'**{r}**', style={'text-align': 'left'})]
 
-        base_url = current_app.config.get("HEROKU_URL") if current_app.config.get("HEROKU_URL") else "http://127.0.0.1:5000"
-        base_url = os.path.join(base_url, "api", "fetch", "twitter")
+        base_url = url_for('api.fetch_twitter', _external=True)
+
         full_url = base_url + "?content=" + r
 
         # Create a clickable link
