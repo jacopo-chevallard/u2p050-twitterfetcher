@@ -13,10 +13,11 @@ def register_callbacks(app, cache=None):
         Input(component_id='send_button', component_property='n_clicks'),
         Input(component_id="msg_input",component_property="n_submit"),
         State(component_id='msg_input', component_property='value'),
+        State("toggle", "value"),
         prevent_initial_call=True
     )
     # function to add new user*bot interaction to conversation history
-    def update_conversation(click, n_submit, text):
+    def update_conversation(click, n_submit, text, approach):
         # user message aligned left
         rcvd = [dcc.Markdown(f'*{text}*', style={'text-align': 'left'})]
 
@@ -25,9 +26,12 @@ def register_callbacks(app, cache=None):
         # bot response aligned right and italics
         rspd = [dcc.Markdown(f'**{r}**', style={'text-align': 'left'})]
 
-        base_url = url_for('api.fetch_twitter', _external=True)
+        if approach == 'fetch':
+            base_url = url_for('api.fetch_twitter', _external=True)
+        elif approach == 'stream':
+            base_url = url_for('api.stream_twitter', _external=True)
 
-        full_url = base_url + "?content=" + r
+        full_url = base_url + "?request=" + r
 
         # Create a clickable link
         clickable_link = html.A(f'{full_url}', href=f'{full_url}', target='_blank')
