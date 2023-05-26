@@ -41,3 +41,4 @@ class ProductionConfig(BaseConfig):
     ENV = "production"
     TESTING = False
     DEBUG = True
+    HEROKU_URL = "https://u2p050-twitterfetcher.herokuapp.com/"
