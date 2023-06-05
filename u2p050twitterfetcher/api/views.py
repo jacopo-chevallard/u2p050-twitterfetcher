@@ -20,7 +20,9 @@ def print_hello():
 
 @api_bp.route("/fetch/twitter", methods=["GET", "POST"])
 def fetch_twitter():
-    content = request.args.get('request', None)
+    content = request.args.get('request', None, type=str)
+    n_tweets = request.args.get('n_tweets', 100, type=int)
+
     if current_app.config.get('ENV') in ['testing', 'development']:
         base_dir = os.path.dirname(os.path.abspath(__file__))
         with open(os.path.join(base_dir, 'data', "u2p050.jsonl"), 'r') as json_file:
@@ -28,11 +30,16 @@ def fetch_twitter():
             print(tweets[0])
             tweets = [reformat_output_payload(tweet) for tweet in tweets]
     else:
-        try:
-            scraper = snscrape.modules.twitter.TwitterSearchScraper(content)
-            tweets = [reformat_output_payload(tweet.json()) for tweet in scraper.get_items()]
-        except:
-            return jsonify({"error": "Invalid request"}), 400
+        scraper = snscrape.modules.twitter.TwitterSearchScraper(content)
+        tweets = [] ; _n = 0
+        for i, tweet in enumerate(scraper.get_items()):
+            try:
+                tweets.append(reformat_output_payload(tweet.json()))
+                _n += 1
+            except:
+                pass
+            if _n == n_tweets:
+                break
 
     if request.method == 'POST':
         data = request.get_json()
