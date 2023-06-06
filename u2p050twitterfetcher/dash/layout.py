@@ -1,14 +1,29 @@
 import dash_bootstrap_components as dbc
 import dash_mantine_components as dmc
 from dash import html, dcc
+from dash.dependencies import Input, Output
+from ..auth.auth import valid_auth_required
+from flask import current_app
+
+_PAGE_CONTENT_ID = "page-content"
+_AUTH_CHECK_INTERVAL_ID = "auth-check-interval"
 
 def apply_layout_with_auth(app):
     """Because Layout must be a dash component or a function that returns a dash component.
     :param dash_app:
     :return:
     """
-    app.layout = layout()
+    app.layout = html.Div([
+        html.Div(id = _PAGE_CONTENT_ID),
+        dcc.Interval(id = _AUTH_CHECK_INTERVAL_ID,
+                        disabled=True)
+    ])
 
+    @app.callback(Output(_PAGE_CONTENT_ID, "children"),
+              Input(_AUTH_CHECK_INTERVAL_ID, "n_intervals"))
+    @valid_auth_required
+    def layout_components(n):
+        return layout()
 
 def layout():
     """Function to design the layout, can pass arguments like dash_app or server

@@ -11,22 +11,12 @@ def payload_from_token(token=None):
 
     if request.args.get("token"):
         session["token"] = request.args.get("token")
-        session["startDate"] = request.args.get("startDate")
-        session["endDate"] = request.args.get("endDate")
-
-    # Condition for local test where token is not mandatory
-    if current_app.config.get("ENV") in ["testing", "development"]:
-        # Set the project you want to work on in Development mode unless you passed a token
-        if not session.get("token"):
-            return {"projectKey": None}  # pseudo payload
 
     try:
         token = session.get("token")
         payload = jwt.decode(
             token, key=current_app.config.get("TOKEN_SECRET"), algorithms=["HS256"]
         )
-        payload["startDate"] = session.get("startDate")
-        payload["endDate"] = session.get("endDate")
         return payload
 
     except jwt.ExpiredSignatureError as e:

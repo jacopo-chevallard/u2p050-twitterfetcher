@@ -9,21 +9,25 @@ import re
 
 from . import api_bp
 from ..utils.format import reformat_output_payload
+from ..auth.auth import valid_auth_required
 
 _DATE_FORMAT = "%Y-%m-%dT%H:%M:%S%z"
 
 @api_bp.route("/print_hello", methods=["GET"])
+@valid_auth_required
 def print_hello():
     person_name = request.args.get('person_name', 'World')
     return make_response(json.dumps({"hello": person_name}), 200)
 
 
 @api_bp.route("/fetch/twitter", methods=["GET", "POST"])
+@valid_auth_required
 def fetch_twitter():
     content = request.args.get('request', None, type=str)
     n_tweets = request.args.get('n_tweets', 100, type=int)
+    sort_mode = request.args.get('sort', 'ascending', type=str)
 
-    if current_app.config.get('ENV') in ['testing', 'development']:
+    if current_app.config.get('ENV') in ['development']:
         base_dir = os.path.dirname(os.path.abspath(__file__))
         with open(os.path.join(base_dir, 'data', "u2p050.jsonl"), 'r') as json_file:
             tweets = json.load(json_file)
@@ -60,7 +64,12 @@ def fetch_twitter():
             for tweet in tweets:
                 tweet['content'] = re.sub(data['regex'], '', tweet['content']).strip()
 
-    tweets.sort(key=lambda x: datetime.strptime(x['date'], _DATE_FORMAT), reverse=True)
+    if sort_mode == 'ascending':
+        reverse = False
+    elif sort_mode == 'descending':
+        reverse = True
+
+    tweets.sort(key=lambda x: datetime.strptime(x['date'], _DATE_FORMAT), reverse=reverse)
 
     data_str = json.dumps(tweets, ensure_ascii=False)
 
@@ -74,6 +83,7 @@ def fetch_twitter():
     return Response(safe_str, mimetype='application/json')
 
 @api_bp.route("/stream/twitter", methods=["GET"])
+@valid_auth_required
 def stream_twitter():
     content = request.args.get('request', None)
     delay = 10
