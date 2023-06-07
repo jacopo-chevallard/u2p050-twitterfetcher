@@ -10,8 +10,20 @@ import re
 from . import api_bp
 from ..utils.format import reformat_output_payload
 from ..auth.auth import valid_auth_required
+from ..utils import preprocessor
 
 _DATE_FORMAT = "%Y-%m-%dT%H:%M:%S%z"
+
+_PREPROCESSING_OPTIONS = {
+    "url": preprocessor.OPT.URL,
+    "mention": preprocessor.OPT.MENTION,
+    "hashtag": preprocessor.OPT.HASHTAG,
+    "reserved": preprocessor.OPT.RESERVED,
+    "emoji": preprocessor.OPT.EMOJI,
+    "smiley": preprocessor.OPT.SMILEY,
+    "number": preprocessor.OPT.NUMBER,
+    "escape_char": preprocessor.OPT.ESCAPE_CHAR
+}
 
 @api_bp.route("/print_hello", methods=["GET"])
 @valid_auth_required
@@ -31,7 +43,6 @@ def fetch_twitter():
         base_dir = os.path.dirname(os.path.abspath(__file__))
         with open(os.path.join(base_dir, 'data', "u2p050.jsonl"), 'r') as json_file:
             tweets = json.load(json_file)
-            print(tweets[0])
             tweets = [reformat_output_payload(tweet) for tweet in tweets]
     else:
         scraper = snscrape.modules.twitter.TwitterSearchScraper(content)
@@ -63,6 +74,13 @@ def fetch_twitter():
         if 'regex' in data:
             for tweet in tweets:
                 tweet['content'] = re.sub(data['regex'], '', tweet['content']).strip()
+
+        if 'clean' in data:
+            # Clean tweet content
+            options = [_PREPROCESSING_OPTIONS[key] for key in data["clean"]]        
+            preprocessor.set_options(*options)
+            for tweet in tweets:
+                tweet['content'] = preprocessor.clean(tweet['content']) 
 
     if sort_mode == 'ascending':
         reverse = False
