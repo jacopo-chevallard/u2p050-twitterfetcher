@@ -100,6 +100,131 @@ def fetch_twitter():
             
     return Response(safe_str, mimetype='application/json')
 
+@api_bp.route("/fetch/twitter/replies/<tweet_id>", methods=["GET", "POST"])
+@valid_auth_required
+def fetch_tweet_replies(tweet_id):
+
+    n_tweets = request.args.get('n_tweets', 100, type=int)
+    sort_mode = request.args.get('sort', 'ascending', type=str)
+
+    scraper = snscrape.modules.twitter.TwitterTweetScraper(tweet_id, mode=snscrape.modules.twitter.TwitterTweetScraperMode.RECURSE)
+    replies = list(scraper.get_items())
+    tweets = [] ; _n = 0
+    for i, tweet in enumerate(replies):
+        try:
+            tweets.append(reformat_output_payload(tweet.json()))
+            _n += 1
+        except:
+            pass
+        if _n == n_tweets:
+            break
+
+    if request.method == 'POST':
+        data = request.get_json()
+        
+        if 'newer' in data:
+            date = datetime.strptime(data["newer"], _DATE_FORMAT)
+            _tweets = []
+            for tweet in tweets:
+                _date = datetime.strptime(tweet['date'], _DATE_FORMAT)
+                if _date > date:
+                    _tweets.append(tweet)
+            tweets = _tweets
+
+        if 'keep_fields' in data:
+            tweets = [{k: v for k, v in tweet.items() if k in data['keep_fields']} for tweet in tweets]
+
+        if 'regex' in data:
+            for tweet in tweets:
+                tweet['content'] = re.sub(data['regex'], '', tweet['content']).strip()
+
+        if 'clean' in data:
+            # Clean tweet content
+            options = [_PREPROCESSING_OPTIONS[key] for key in data["clean"]]        
+            preprocessor.set_options(*options)
+            for tweet in tweets:
+                tweet['content'] = preprocessor.clean(tweet['content']) 
+
+    if sort_mode == 'ascending':
+        reverse = False
+    elif sort_mode == 'descending':
+        reverse = True
+
+    tweets.sort(key=lambda x: datetime.strptime(x['date'], _DATE_FORMAT), reverse=reverse)
+
+    data_str = json.dumps(tweets, ensure_ascii=False)
+
+    # Encode the string as UTF-8, ignoring errors
+    data_bytes = data_str.encode('utf-8', 'ignore')
+
+    # Decode the bytes back into a string, also ignoring errors.
+    # This step removes any characters that could not be encoded as UTF-8.
+    safe_str = data_bytes.decode('utf-8', 'ignore')
+            
+    return Response(safe_str, mimetype='application/json')
+
+@api_bp.route("/fetch/twitter/profile/<profile>", methods=["GET", "POST"])
+@valid_auth_required
+def fetch_tweet(profile):
+
+    n_tweets = request.args.get('n_tweets', 100, type=int)
+    sort_mode = request.args.get('sort', 'ascending', type=str)
+
+    scraper = snscrape.modules.twitter.TwitterProfileScraper(profile)
+    tweets = [] ; _n = 0
+    for i, tweet in enumerate(scraper.get_items()):
+        try:
+            tweets.append(reformat_output_payload(tweet.json()))
+            _n += 1
+        except:
+            pass
+        if _n == n_tweets:
+            break
+
+    if request.method == 'POST':
+        data = request.get_json()
+        
+        if 'newer' in data:
+            date = datetime.strptime(data["newer"], _DATE_FORMAT)
+            _tweets = []
+            for tweet in tweets:
+                _date = datetime.strptime(tweet['date'], _DATE_FORMAT)
+                if _date > date:
+                    _tweets.append(tweet)
+            tweets = _tweets
+
+        if 'keep_fields' in data:
+            tweets = [{k: v for k, v in tweet.items() if k in data['keep_fields']} for tweet in tweets]
+
+        if 'regex' in data:
+            for tweet in tweets:
+                tweet['content'] = re.sub(data['regex'], '', tweet['content']).strip()
+
+        if 'clean' in data:
+            # Clean tweet content
+            options = [_PREPROCESSING_OPTIONS[key] for key in data["clean"]]        
+            preprocessor.set_options(*options)
+            for tweet in tweets:
+                tweet['content'] = preprocessor.clean(tweet['content']) 
+
+    if sort_mode == 'ascending':
+        reverse = False
+    elif sort_mode == 'descending':
+        reverse = True
+
+    tweets.sort(key=lambda x: datetime.strptime(x['date'], _DATE_FORMAT), reverse=reverse)
+
+    data_str = json.dumps(tweets, ensure_ascii=False)
+
+    # Encode the string as UTF-8, ignoring errors
+    data_bytes = data_str.encode('utf-8', 'ignore')
+
+    # Decode the bytes back into a string, also ignoring errors.
+    # This step removes any characters that could not be encoded as UTF-8.
+    safe_str = data_bytes.decode('utf-8', 'ignore')
+            
+    return Response(safe_str, mimetype='application/json')
+
 @api_bp.route("/stream/twitter", methods=["GET"])
 @valid_auth_required
 def stream_twitter():
