@@ -107,43 +107,42 @@ def fetch_tweet_replies(tweet_id):
     n_tweets = request.args.get('n_tweets', 100, type=int)
     sort_mode = request.args.get('sort', 'ascending', type=str)
 
+    data = dict() ; date = None
+    if request.method == 'POST':
+        data = request.get_json()
+        if 'newer' in data:
+            date = datetime.strptime(data["newer"], _DATE_FORMAT)
+
     scraper = snscrape.modules.twitter.TwitterTweetScraper(tweet_id, mode=snscrape.modules.twitter.TwitterTweetScraperMode.RECURSE)
     replies = list(scraper.get_items())
     tweets = [] ; _n = 0
     for i, tweet in enumerate(replies):
         try:
-            tweets.append(reformat_output_payload(tweet.json()))
-            _n += 1
-        except:
-            pass
-        if _n == n_tweets:
-            break
-
-    if request.method == 'POST':
-        data = request.get_json()
-        
-        if 'newer' in data:
-            date = datetime.strptime(data["newer"], _DATE_FORMAT)
-            _tweets = []
-            for tweet in tweets:
+            tweet = reformat_output_payload(tweet.json())
+            if date is not None:
                 _date = datetime.strptime(tweet['date'], _DATE_FORMAT)
                 if _date > date:
-                    _tweets.append(tweet)
-            tweets = _tweets
+                    tweets.append(tweet)
+            else:
+                tweets.append(tweet)
+        except:
+            pass
+        if len(tweets) == n_tweets:
+            break
 
-        if 'keep_fields' in data:
-            tweets = [{k: v for k, v in tweet.items() if k in data['keep_fields']} for tweet in tweets]
+    if 'keep_fields' in data:
+        tweets = [{k: v for k, v in tweet.items() if k in data['keep_fields']} for tweet in tweets]
 
-        if 'regex' in data:
-            for tweet in tweets:
-                tweet['content'] = re.sub(data['regex'], '', tweet['content']).strip()
+    if 'regex' in data:
+        for tweet in tweets:
+            tweet['content'] = re.sub(data['regex'], '', tweet['content']).strip()
 
-        if 'clean' in data:
-            # Clean tweet content
-            options = [_PREPROCESSING_OPTIONS[key] for key in data["clean"]]        
-            preprocessor.set_options(*options)
-            for tweet in tweets:
-                tweet['content'] = preprocessor.clean(tweet['content']) 
+    if 'clean' in data:
+        # Clean tweet content
+        options = [_PREPROCESSING_OPTIONS[key] for key in data["clean"]]        
+        preprocessor.set_options(*options)
+        for tweet in tweets:
+            tweet['content'] = preprocessor.clean(tweet['content']) 
 
     if sort_mode == 'ascending':
         reverse = False
